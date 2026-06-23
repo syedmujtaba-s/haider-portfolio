@@ -1,0 +1,16 @@
+# OS / editor
+Thumbs.db
+.DS_Store
+*.swp
+
+# scratch / temp screenshots
+_*.png
+_*.txt
+_imglist.txt
+
+# raw PDF source (the deployable download copy lives in assets/)
+Portfolio_compressed.pdf
+
+# tooling
+.vercel
+node_modules
