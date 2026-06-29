@@ -228,6 +228,24 @@
     var STORE_KEY = "haiderPortfolioReqId";
 
     function rqAnnounce(m) { if (rqLive) rqLive.textContent = m; }
+    function rqRenderDenied(d) {
+      var msg = $("#rqDeniedMsg");
+      var again = $("#rqAgain");
+      var denials = (d && d.consecutiveDenials) || 1;
+      var deniedAt = (d && d.deniedAt) || 0;
+      var COOLDOWN = 2 * 24 * 60 * 60 * 1000; // 2 days
+      if (denials >= 3) {
+        if (msg) msg.textContent = "This request was declined. You have reached the request limit, so please get in touch directly through the contact section and we can sort it out.";
+        if (again) again.hidden = true;
+      } else if (deniedAt && Date.now() < deniedAt + COOLDOWN) {
+        var when = new Date(deniedAt + COOLDOWN);
+        if (msg) msg.textContent = "This request was declined. You can reach out through the contact section, or send a new request after " + when.toLocaleDateString() + ".";
+        if (again) again.hidden = true;
+      } else {
+        if (msg) msg.textContent = "This request was declined. Feel free to reach out through the contact section, or send a new request below.";
+        if (again) again.hidden = false;
+      }
+    }
     function rqShow(view) {
       Object.keys(rqViews).forEach(function (k) { if (rqViews[k]) rqViews[k].hidden = (k !== view); });
     }
@@ -267,7 +285,8 @@
             rqAnnounce("Access approved. Your download is ready.");
             if (rqDownload.focus) rqDownload.focus();
           } else if (d.status === "denied") {
-            rqStopPoll(); if (rqDownload) rqDownload.href = "#"; rqShow("denied");
+            rqStopPoll(); if (rqDownload) rqDownload.href = "#";
+            rqRenderDenied(d); rqShow("denied");
             rqAnnounce("Your request was not approved.");
           } else if (d.status === "expired" || d.status === "superseded") {
             rqStopPoll(); rqSetId(null); rqCurrentId = null;

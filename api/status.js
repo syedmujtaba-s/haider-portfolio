@@ -23,6 +23,13 @@ module.exports = async function (req, res) {
         downloadUrl: "/api/download?id=" + id + "&t=" + r.downloadToken
       });
     }
+    if (r.status === "denied") {
+      return res.status(200).json({
+        status: "denied",
+        deniedAt: r.deniedAt || r.decidedAt || 0,
+        consecutiveDenials: r.consecutiveDenials || 1
+      });
+    }
     return res.status(200).json({ status: r.status || "pending" });
   } catch (e) {
     console.error("status error:", e && e.message);

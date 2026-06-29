@@ -1,7 +1,10 @@
 "use strict";
 /* POST /api/request-access  -> creates a pending request and emails the owner. */
 
-const { getDb, token, escapeHtml, isEmail, readJson, publicBaseUrl, clientIp, rateLimitOk, sendOwnerEmail } = require("../lib/util.js");
+const { getDb, token, emailKey, escapeHtml, isEmail, readJson, publicBaseUrl, clientIp, rateLimitOk, sendOwnerEmail } = require("../lib/util.js");
+
+const COOLDOWN_MS = 2 * 24 * 60 * 60 * 1000; // 2 days between requests after a denial
+const MAX_CONSECUTIVE_DENIALS = 3;
 
 module.exports = async function (req, res) {
   if (req.method !== "POST") {
@@ -25,6 +28,21 @@ module.exports = async function (req, res) {
 
     if (!name) return res.status(400).json({ error: "Please enter your name." });
     if (!isEmail(email)) return res.status(400).json({ error: "Please enter a valid email address." });
+
+    // Per-email policy: lock after consecutive denials, and enforce the cooldown
+    // after a denial. Enforced server-side so clearing the browser cannot bypass it.
+    const rkey = emailKey(email);
+    const rsnap = await db.collection("requesters").doc(rkey).get();
+    if (rsnap.exists) {
+      const rd = rsnap.data();
+      if ((rd.consecutiveDenials || 0) >= MAX_CONSECUTIVE_DENIALS) {
+        return res.status(403).json({ error: "You have reached the request limit for this email. Please get in touch through the contact section and we can sort it out." });
+      }
+      if (rd.lastDeniedAt && Date.now() < rd.lastDeniedAt + COOLDOWN_MS) {
+        const when = new Date(rd.lastDeniedAt + COOLDOWN_MS);
+        return res.status(429).json({ error: "This email was recently declined. You can send a new request after " + when.toDateString() + "." });
+      }
+    }
 
     // Supersede this email's earlier still-pending requests so the owner only
     // ever has one live request per person, and old approval emails go dead.

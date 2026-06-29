@@ -1,7 +1,7 @@
 "use strict";
 /* GET /api/approve?id=...&s=...  -> owner approves; mints a 72h download token. */
 
-const { getDb, token, escapeHtml, htmlPage } = require("../lib/util.js");
+const { getDb, token, emailKey, escapeHtml, htmlPage } = require("../lib/util.js");
 
 const DOWNLOAD_TTL_MS = 72 * 60 * 60 * 1000;
 
@@ -32,6 +32,13 @@ module.exports = async function (req, res) {
         decidedAt: Date.now(),
         downloadExpiresAt: Date.now() + DOWNLOAD_TTL_MS
       });
+      // Approval resets this email's denial streak and clears any cooldown.
+      try {
+        await db.collection("requesters").doc(emailKey(r.email)).set(
+          { consecutiveDenials: 0, lastDeniedAt: 0, lastApprovedAt: Date.now() },
+          { merge: true }
+        );
+      } catch (e) { console.error("requester reset error:", e && e.message); }
     }
 
     return res.status(200).send(

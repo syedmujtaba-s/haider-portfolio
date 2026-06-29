@@ -1,7 +1,7 @@
 "use strict";
 /* GET /api/deny?id=...&s=...  -> owner denies the request. */
 
-const { getDb, escapeHtml, htmlPage } = require("../lib/util.js");
+const { getDb, emailKey, escapeHtml, htmlPage } = require("../lib/util.js");
 
 module.exports = async function (req, res) {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -24,7 +24,15 @@ module.exports = async function (req, res) {
     }
 
     if (r.status !== "denied") {
-      await ref.update({ status: "denied", decidedAt: Date.now(), downloadToken: "", downloadExpiresAt: 0 });
+      // Increment this email's consecutive-denial streak.
+      var newCount = 1;
+      try {
+        const rref = db.collection("requesters").doc(emailKey(r.email));
+        const rsnap = await rref.get();
+        newCount = (((rsnap.exists && rsnap.data().consecutiveDenials) || 0) + 1);
+        await rref.set({ consecutiveDenials: newCount, lastDeniedAt: Date.now() }, { merge: true });
+      } catch (e) { console.error("requester deny update error:", e && e.message); }
+      await ref.update({ status: "denied", decidedAt: Date.now(), deniedAt: Date.now(), consecutiveDenials: newCount, downloadToken: "", downloadExpiresAt: 0 });
     }
 
     return res.status(200).send(
