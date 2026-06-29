@@ -269,7 +269,7 @@
           } else if (d.status === "denied") {
             rqStopPoll(); if (rqDownload) rqDownload.href = "#"; rqShow("denied");
             rqAnnounce("Your request was not approved.");
-          } else if (d.status === "expired") {
+          } else if (d.status === "expired" || d.status === "superseded") {
             rqStopPoll(); rqSetId(null); rqCurrentId = null;
             if (rqDownload) rqDownload.href = "#"; rqShow("form");
           } else {

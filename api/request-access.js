@@ -26,6 +26,23 @@ module.exports = async function (req, res) {
     if (!name) return res.status(400).json({ error: "Please enter your name." });
     if (!isEmail(email)) return res.status(400).json({ error: "Please enter a valid email address." });
 
+    // Supersede this email's earlier still-pending requests so the owner only
+    // ever has one live request per person, and old approval emails go dead.
+    try {
+      const prior = await db.collection("accessRequests").where("email", "==", email).get();
+      const batch = db.batch();
+      let superseded = 0;
+      prior.forEach(function (doc) {
+        if (doc.data().status === "pending") {
+          batch.update(doc.ref, { status: "superseded", supersededAt: Date.now() });
+          superseded++;
+        }
+      });
+      if (superseded > 0) await batch.commit();
+    } catch (e) {
+      console.error("supersede error:", e && e.message); // non-fatal
+    }
+
     const id = token(16);
     const approveSecret = token(16);
 

@@ -21,6 +21,10 @@ module.exports = async function (req, res) {
     const r = snap.data();
     if (r.approveSecret !== s) return res.status(403).send(htmlPage("Invalid link", "<p>This approval link is not valid.</p>", "#e06363"));
 
+    if (r.status === "superseded") {
+      return res.status(200).send(htmlPage("Request replaced", "<p>This request from <b>" + escapeHtml(r.name) + "</b> was replaced by a newer one from the same person. Please approve their most recent email instead.</p>", "#102f4e"));
+    }
+
     if (r.status !== "approved") {
       await ref.update({
         status: "approved",
