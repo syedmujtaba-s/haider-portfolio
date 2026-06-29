@@ -220,9 +220,14 @@
     var rqForm = $("#rqAccessForm");
     var rqNote = $("#rqNote");
     var rqDownload = $("#rqDownload");
+    var rqLive = $("#rqLive");
     var rqPoll = null;
+    var rqCurrentId = null;
+    var rqSubmitting = false;
+    var rqTrigger = null;
     var STORE_KEY = "haiderPortfolioReqId";
 
+    function rqAnnounce(m) { if (rqLive) rqLive.textContent = m; }
     function rqShow(view) {
       Object.keys(rqViews).forEach(function (k) { if (rqViews[k]) rqViews[k].hidden = (k !== view); });
     }
@@ -231,31 +236,47 @@
     function rqSetId(id) { try { id ? localStorage.setItem(STORE_KEY, id) : localStorage.removeItem(STORE_KEY); } catch (e) {} }
 
     function rqOpen() {
+      rqTrigger = document.activeElement;
       rqModal.classList.add("open");
       rqModal.setAttribute("aria-hidden", "false");
       document.body.classList.add("nav-open");
       var id = rqGetId();
       if (id) { rqShow("pending"); rqCheck(id); rqStartPoll(id); }
       else { rqShow("form"); }
+      setTimeout(function () {
+        var f = (rqViews.form && !rqViews.form.hidden && $("#rq-name")) || $("#rqClose");
+        if (f && f.focus) f.focus();
+      }, 30);
     }
     function rqClose() {
       rqModal.classList.remove("open");
       rqModal.setAttribute("aria-hidden", "true");
       document.body.classList.remove("nav-open");
       rqStopPoll();
+      if (rqDownload) rqDownload.href = "#";
+      if (rqTrigger && rqTrigger.focus) rqTrigger.focus();
     }
-    function rqStartPoll(id) { rqStopPoll(); rqPoll = setInterval(function () { rqCheck(id); }, 5000); }
+    function rqStartPoll(id) { rqCurrentId = id; rqStopPoll(); rqPoll = setInterval(function () { rqCheck(id); }, 5000); }
     function rqCheck(id) {
       fetch("/api/status?id=" + encodeURIComponent(id))
         .then(function (r) { return r.json(); })
         .then(function (d) {
           if (!d) return;
-          if (d.status === "approved" && d.downloadUrl) { rqStopPoll(); rqDownload.href = d.downloadUrl; rqShow("approved"); }
-          else if (d.status === "denied") { rqStopPoll(); rqShow("denied"); }
-          else if (d.status === "expired") { rqStopPoll(); rqSetId(null); rqShow("form"); }
-          else { rqShow("pending"); }
+          if (d.status === "approved" && d.downloadUrl) {
+            rqStopPoll(); rqDownload.href = d.downloadUrl; rqShow("approved");
+            rqAnnounce("Access approved. Your download is ready.");
+            if (rqDownload.focus) rqDownload.focus();
+          } else if (d.status === "denied") {
+            rqStopPoll(); if (rqDownload) rqDownload.href = "#"; rqShow("denied");
+            rqAnnounce("Your request was not approved.");
+          } else if (d.status === "expired") {
+            rqStopPoll(); rqSetId(null); rqCurrentId = null;
+            if (rqDownload) rqDownload.href = "#"; rqShow("form");
+          } else {
+            rqShow("pending");
+          }
         })
-        .catch(function () { /* stay on current view, try again next tick */ });
+        .catch(function () { /* stay on current view, retry next tick */ });
     }
 
     $$("[data-request-access]").forEach(function (el) {
@@ -264,16 +285,29 @@
     $("#rqClose").addEventListener("click", rqClose);
     rqModal.addEventListener("click", function (e) { if (e.target === rqModal) rqClose(); });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape" && rqModal.classList.contains("open")) rqClose(); });
+
     var rqCheckBtn = $("#rqCheck");
-    if (rqCheckBtn) rqCheckBtn.addEventListener("click", function () { var id = rqGetId(); if (id) rqCheck(id); });
+    if (rqCheckBtn) rqCheckBtn.addEventListener("click", function () {
+      var id = rqGetId();
+      if (id) { rqCheck(id); rqStartPoll(id); }
+    });
+
+    // Pause polling while the tab is hidden; resume with an immediate check when visible.
+    document.addEventListener("visibilitychange", function () {
+      if (!rqModal.classList.contains("open")) return;
+      if (document.hidden) { rqStopPoll(); return; }
+      if (rqCurrentId && rqViews.pending && !rqViews.pending.hidden) { rqCheck(rqCurrentId); rqStartPoll(rqCurrentId); }
+    });
 
     if (rqForm) {
       rqForm.addEventListener("submit", function (e) {
         e.preventDefault();
+        if (rqSubmitting) return;
         var name = $("#rq-name").value.trim();
         var email = $("#rq-email").value.trim();
         var reason = $("#rq-reason").value.trim();
         if (!name || !email) { rqNote.textContent = "Please enter your name and email."; rqNote.className = "form-note err"; return; }
+        rqSubmitting = true;
         rqNote.textContent = "Sending request..."; rqNote.className = "form-note";
         var btn = rqForm.querySelector("button[type=submit]");
         if (btn) btn.disabled = true;
@@ -284,16 +318,18 @@
         })
           .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
           .then(function (res) {
+            rqSubmitting = false;
             if (btn) btn.disabled = false;
             if (res.ok && res.d && res.d.id) {
               rqSetId(res.d.id); rqNote.textContent = ""; rqForm.reset();
-              rqShow("pending"); rqStartPoll(res.d.id);
+              rqShow("pending"); rqAnnounce("Request sent. Waiting for approval."); rqStartPoll(res.d.id);
             } else {
               rqNote.textContent = (res.d && res.d.error) || "Something went wrong. Please try again.";
               rqNote.className = "form-note err";
             }
           })
           .catch(function () {
+            rqSubmitting = false;
             if (btn) btn.disabled = false;
             rqNote.textContent = "Network error. Please try again."; rqNote.className = "form-note err";
           });

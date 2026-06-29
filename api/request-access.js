@@ -1,7 +1,7 @@
 "use strict";
 /* POST /api/request-access  -> creates a pending request and emails the owner. */
 
-const { getDb, token, escapeHtml, isEmail, readJson, baseUrl, clientIp, rateLimitOk, sendOwnerEmail } = require("../lib/util.js");
+const { getDb, token, escapeHtml, isEmail, readJson, publicBaseUrl, clientIp, rateLimitOk, sendOwnerEmail } = require("../lib/util.js");
 
 module.exports = async function (req, res) {
   if (req.method !== "POST") {
@@ -11,9 +11,12 @@ module.exports = async function (req, res) {
   try {
     const db = getDb();
 
-    // Light abuse protection: max 5 requests per IP per hour.
+    // Light abuse protection: max 5 requests per IP per hour, plus a global
+    // backstop so spoofed IPs cannot flood the owner's inbox without bound.
     const ok = await rateLimitOk(db, "req:" + clientIp(req), 5, 60 * 60 * 1000);
     if (!ok) return res.status(429).json({ error: "Too many requests. Please try again in a little while." });
+    const okGlobal = await rateLimitOk(db, "global:email", 60, 60 * 60 * 1000);
+    if (!okGlobal) return res.status(429).json({ error: "The site is handling a lot of requests right now. Please try again later." });
 
     const body = await readJson(req);
     const name = String(body.name || "").trim().slice(0, 120);
@@ -36,7 +39,7 @@ module.exports = async function (req, res) {
       ip: clientIp(req)
     });
 
-    const base = baseUrl(req);
+    const base = publicBaseUrl();
     const approveUrl = base + "/api/approve?id=" + id + "&s=" + approveSecret;
     const denyUrl = base + "/api/deny?id=" + id + "&s=" + approveSecret;
 
@@ -49,9 +52,9 @@ module.exports = async function (req, res) {
         "<p><b>Email:</b> " + escapeHtml(email) + "</p>" +
         "<p><b>Reason:</b> " + (escapeHtml(reason) || "<i>(none given)</i>") + "</p>" +
         '<p style="margin:26px 0">' +
-        '<a href="' + approveUrl + '" style="background:#2f7fc4;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block">Approve</a>' +
+        '<a href="' + escapeHtml(approveUrl) + '" style="background:#2f7fc4;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block">Approve</a>' +
         "&nbsp;&nbsp;&nbsp;" +
-        '<a href="' + denyUrl + '" style="background:#e06363;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block">Deny</a>' +
+        '<a href="' + escapeHtml(denyUrl) + '" style="background:#e06363;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block">Deny</a>' +
         "</p>" +
         '<p style="color:#8a98a3;font-size:12px">After you click Approve, the requester sees their download unlock automatically. This request expires in 7 days.</p>' +
         "</div>"

@@ -301,6 +301,7 @@ p{margin:0 0 1rem}
 [data-reveal].in{opacity:1;transform:none}
 
 /* ---------- Access request modal ---------- */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .rq-modal{position:fixed;inset:0;z-index:130;background:rgba(8,18,28,.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s}
 .rq-modal.open{opacity:1;visibility:visible}
 .rq-box{position:relative;background:#fff;width:min(460px,94vw);max-height:92vh;overflow:auto;border-radius:18px;box-shadow:0 30px 80px rgba(8,18,28,.4);padding:38px 34px}
