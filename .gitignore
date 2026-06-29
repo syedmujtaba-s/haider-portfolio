@@ -11,6 +11,14 @@ _imglist.txt
 # raw PDF source (the deployable download copy lives in assets/)
 Portfolio_compressed.pdf
 
+# secrets - NEVER commit (Firebase service-account keys, env files)
+*firebase-adminsdk*.json
+*serviceaccount*.json
+serviceAccount*.json
+haider-portfolio-*.json
+.env
+.env.*
+
 # tooling
 .vercel
 node_modules
