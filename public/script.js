@@ -292,6 +292,15 @@
       if (id) { rqCheck(id); rqStartPoll(id); }
     });
 
+    // "Send another request" from the denied screen: clear and return to the form.
+    var rqAgainBtn = $("#rqAgain");
+    if (rqAgainBtn) rqAgainBtn.addEventListener("click", function () {
+      rqStopPoll(); rqSetId(null); rqCurrentId = null;
+      if (rqDownload) rqDownload.href = "#";
+      rqShow("form");
+      setTimeout(function () { var n = $("#rq-name"); if (n && n.focus) n.focus(); }, 30);
+    });
+
     // Pause polling while the tab is hidden; resume with an immediate check when visible.
     document.addEventListener("visibilitychange", function () {
       if (!rqModal.classList.contains("open")) return;
