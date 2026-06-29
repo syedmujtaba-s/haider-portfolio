@@ -50,7 +50,7 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15 15 0 006.6 6.6l2.2-2.2a1 1 0 011-.24 11.4 11.4 0 003.6.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.4 11.4 0 00.57 3.6 1 1 0 01-.25 1z"/></svg>
           <span>+92 312 4531971</span>
         </a>
-        <a href="assets/Haider-Ali-BIM-Portfolio.pdf" class="btn btn-sm btn-primary" download>Portfolio PDF</a>
+        <button type="button" class="btn btn-sm btn-primary" data-request-access>Portfolio PDF</button>
         <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false">
           <span></span><span></span><span></span>
         </button>
@@ -72,7 +72,7 @@
       </p>
       <div class="hero-cta" data-reveal>
         <a href="#projects" class="btn btn-primary">View Projects</a>
-        <a href="assets/Haider-Ali-BIM-Portfolio.pdf" class="btn btn-ghost" download>Download Portfolio</a>
+        <button type="button" class="btn btn-ghost" data-request-access>Download Portfolio</button>
       </div>
       <ul class="hero-stats" data-reveal>
         <li><strong>50,000+</strong><span>sq.ft modeled</span></li>
@@ -484,7 +484,7 @@
       <div class="footer-links">
         <h4>Get the portfolio</h4>
         <ul>
-          <li><a href="assets/Haider-Ali-BIM-Portfolio.pdf" download>Download PDF</a></li>
+          <li><a href="#" data-request-access>Request portfolio PDF</a></li>
           <li><a href="https://www.linkedin.com/in/haider-ali-001780275" target="_blank" rel="noopener">LinkedIn</a></li>
           <li><a href="mailto:official.haider.ali.001@gmail.com">Email me</a></li>
         </ul>
@@ -506,6 +506,44 @@
     </figure>
     <button class="lb-nav lb-next" id="lbNext" aria-label="Next">&#8250;</button>
     <div class="lb-counter" id="lbCounter"></div>
+  </div>
+
+  <!-- ============ ACCESS REQUEST MODAL ============ -->
+  <div class="rq-modal" id="rqModal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Request portfolio access">
+    <div class="rq-box">
+      <button class="rq-close" id="rqClose" aria-label="Close">&times;</button>
+
+      <div class="rq-view" id="rqForm">
+        <h3>Request the full portfolio</h3>
+        <p>Haider reviews each request. Once approved, your download unlocks right here, automatically.</p>
+        <form id="rqAccessForm" novalidate>
+          <div class="field"><label for="rq-name">Name</label><input type="text" id="rq-name" required placeholder="Your name" /></div>
+          <div class="field"><label for="rq-email">Email</label><input type="email" id="rq-email" required placeholder="you@example.com" /></div>
+          <div class="field"><label for="rq-reason">Reason (optional)</label><textarea id="rq-reason" rows="3" placeholder="e.g. reviewing for a BIM role"></textarea></div>
+          <button type="submit" class="btn btn-primary btn-block">Request access</button>
+          <p class="form-note" id="rqNote" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <div class="rq-view" id="rqPending" hidden>
+        <div class="rq-spinner" aria-hidden="true"></div>
+        <h3>Waiting for approval</h3>
+        <p>Your request was sent to Haider. This page updates automatically once he approves. You can close this and come back later, it remembers your request on this device.</p>
+        <button type="button" class="btn btn-ghost btn-sm" id="rqCheck">Check now</button>
+      </div>
+
+      <div class="rq-view" id="rqApproved" hidden>
+        <div class="rq-check" aria-hidden="true">&#10003;</div>
+        <h3>Access approved</h3>
+        <p>Your download is ready and stays valid for 72 hours.</p>
+        <a class="btn btn-primary btn-block" id="rqDownload" href="#" rel="noopener">Download portfolio PDF</a>
+      </div>
+
+      <div class="rq-view" id="rqDenied" hidden>
+        <h3>Request not approved</h3>
+        <p>This request was declined. Feel free to reach out through the contact section and we can sort it out.</p>
+      </div>
+    </div>
   </div>
 
   <button class="to-top" id="toTop" aria-label="Back to top">&uarr;</button>

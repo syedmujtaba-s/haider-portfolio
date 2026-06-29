@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/download.js": {
+      "includeFiles": "private/**"
+    }
+  },
+  "redirects": [
+    { "source": "/private/:path*", "destination": "/", "permanent": false }
+  ]
+}

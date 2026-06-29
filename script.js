@@ -213,6 +213,94 @@
     });
   }
 
+  /* ---------- Portfolio access request (gated download) ---------- */
+  var rqModal = $("#rqModal");
+  if (rqModal) {
+    var rqViews = { form: $("#rqForm"), pending: $("#rqPending"), approved: $("#rqApproved"), denied: $("#rqDenied") };
+    var rqForm = $("#rqAccessForm");
+    var rqNote = $("#rqNote");
+    var rqDownload = $("#rqDownload");
+    var rqPoll = null;
+    var STORE_KEY = "haiderPortfolioReqId";
+
+    function rqShow(view) {
+      Object.keys(rqViews).forEach(function (k) { if (rqViews[k]) rqViews[k].hidden = (k !== view); });
+    }
+    function rqStopPoll() { if (rqPoll) { clearInterval(rqPoll); rqPoll = null; } }
+    function rqGetId() { try { return localStorage.getItem(STORE_KEY); } catch (e) { return null; } }
+    function rqSetId(id) { try { id ? localStorage.setItem(STORE_KEY, id) : localStorage.removeItem(STORE_KEY); } catch (e) {} }
+
+    function rqOpen() {
+      rqModal.classList.add("open");
+      rqModal.setAttribute("aria-hidden", "false");
+      document.body.classList.add("nav-open");
+      var id = rqGetId();
+      if (id) { rqShow("pending"); rqCheck(id); rqStartPoll(id); }
+      else { rqShow("form"); }
+    }
+    function rqClose() {
+      rqModal.classList.remove("open");
+      rqModal.setAttribute("aria-hidden", "true");
+      document.body.classList.remove("nav-open");
+      rqStopPoll();
+    }
+    function rqStartPoll(id) { rqStopPoll(); rqPoll = setInterval(function () { rqCheck(id); }, 5000); }
+    function rqCheck(id) {
+      fetch("/api/status?id=" + encodeURIComponent(id))
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d) return;
+          if (d.status === "approved" && d.downloadUrl) { rqStopPoll(); rqDownload.href = d.downloadUrl; rqShow("approved"); }
+          else if (d.status === "denied") { rqStopPoll(); rqShow("denied"); }
+          else if (d.status === "expired") { rqStopPoll(); rqSetId(null); rqShow("form"); }
+          else { rqShow("pending"); }
+        })
+        .catch(function () { /* stay on current view, try again next tick */ });
+    }
+
+    $$("[data-request-access]").forEach(function (el) {
+      el.addEventListener("click", function (e) { e.preventDefault(); rqOpen(); });
+    });
+    $("#rqClose").addEventListener("click", rqClose);
+    rqModal.addEventListener("click", function (e) { if (e.target === rqModal) rqClose(); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && rqModal.classList.contains("open")) rqClose(); });
+    var rqCheckBtn = $("#rqCheck");
+    if (rqCheckBtn) rqCheckBtn.addEventListener("click", function () { var id = rqGetId(); if (id) rqCheck(id); });
+
+    if (rqForm) {
+      rqForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var name = $("#rq-name").value.trim();
+        var email = $("#rq-email").value.trim();
+        var reason = $("#rq-reason").value.trim();
+        if (!name || !email) { rqNote.textContent = "Please enter your name and email."; rqNote.className = "form-note err"; return; }
+        rqNote.textContent = "Sending request..."; rqNote.className = "form-note";
+        var btn = rqForm.querySelector("button[type=submit]");
+        if (btn) btn.disabled = true;
+        fetch("/api/request-access", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: name, email: email, reason: reason })
+        })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+          .then(function (res) {
+            if (btn) btn.disabled = false;
+            if (res.ok && res.d && res.d.id) {
+              rqSetId(res.d.id); rqNote.textContent = ""; rqForm.reset();
+              rqShow("pending"); rqStartPoll(res.d.id);
+            } else {
+              rqNote.textContent = (res.d && res.d.error) || "Something went wrong. Please try again.";
+              rqNote.className = "form-note err";
+            }
+          })
+          .catch(function () {
+            if (btn) btn.disabled = false;
+            rqNote.textContent = "Network error. Please try again."; rqNote.className = "form-note err";
+          });
+      });
+    }
+  }
+
   /* ---------- Footer year ---------- */
   var yr = $("#year");
   if (yr) yr.textContent = new Date().getFullYear();
