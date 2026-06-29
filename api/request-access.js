@@ -3,7 +3,7 @@
 
 const { getDb, token, emailKey, escapeHtml, isEmail, readJson, publicBaseUrl, clientIp, rateLimitOk, sendOwnerEmail } = require("../lib/util.js");
 
-const COOLDOWN_MS = 2 * 24 * 60 * 60 * 1000; // 2 days between requests after a denial
+const COOLDOWN_MS = 1 * 24 * 60 * 60 * 1000; // 1 day between requests after a denial
 const MAX_CONSECUTIVE_DENIALS = 3;
 
 module.exports = async function (req, res) {

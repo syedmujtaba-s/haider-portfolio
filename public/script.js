@@ -233,7 +233,7 @@
       var again = $("#rqAgain");
       var denials = (d && d.consecutiveDenials) || 1;
       var deniedAt = (d && d.deniedAt) || 0;
-      var COOLDOWN = 2 * 24 * 60 * 60 * 1000; // 2 days
+      var COOLDOWN = 1 * 24 * 60 * 60 * 1000; // 1 day
       if (denials >= 3) {
         if (msg) msg.textContent = "This request was declined. You have reached the request limit, so please get in touch directly through the contact section and we can sort it out.";
         if (again) again.hidden = true;
